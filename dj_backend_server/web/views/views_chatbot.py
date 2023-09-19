@@ -60,27 +60,6 @@ def create_via_website_flow(request):
 
 
 @require_POST
-def create_via_pdf_flow(request):
-    name = request.POST.get('name') or ChatBotDefaults.NAME.value
-    prompt_message = request.POST.get('prompt_message') or ChatBotInitialPromptEnum.AI_ASSISTANT_INITIAL_PROMPT.value
-
-    chatbot = Chatbot.objects.create(
-        id=uuid4(),
-        name=name,
-        token=str(uuid4())[:20],
-        prompt_message=prompt_message
-    )
-
-    files = request.FILES.getlist('pdffiles')
-    # Handle the PDF data source
-    handle_pdf = HandlePdfDataSource(chatbot, files)
-    data_source = handle_pdf.handle()
-
-    # Trigger the PdfDataSourceWasAdded event
-    pdf_data_source_added.send(sender='create_via_pdf_flow', bot_id=chatbot.id, data_source_id=data_source.id)
-    return HttpResponseRedirect(reverse('onboarding.config', args=[str(chatbot.id)]))
-
-@require_POST
 def update_character_settings(request, id):
     print("update_character_settings", str(id))
 
@@ -164,34 +143,3 @@ def get_chat_view(request, token):
         return response
 
     return render(request, 'chat.html', {'bot': bot})
-
-
-def create_via_codebase_flow(request):
-    if request.method == 'POST':
-        prompt_message = request.POST.get('prompt_message') or get_qa_prompt_by_mode(mode="pair_programmer", initial_prompt=None)
-        repo_url = request.POST.get('repo')
-
-        name = request.POST.get('name')
-        name = generate_chatbot_name(repo_url=repo_url, name=name)
-        chatbot = Chatbot.objects.create(
-            id=uuid4(),
-            name=name,
-            token=str(uuid4())[:20],
-            prompt_message=prompt_message
-        )
-
-        codebase_data_source = CodebaseDataSource.objects.create(
-            id=uuid4(),
-            chatbot_id=chatbot.id,
-            repository=repo_url,
-            ingested_at=timezone.now(),
-            ingestion_status="pending"
-        )
-
-        codebase_data_source_added.send(
-            sender=create_via_codebase_flow,
-            chatbot_id=chatbot.id,
-            data_source_id=codebase_data_source.id,
-        )
-
-        return HttpResponseRedirect(reverse('onboarding.config', args=[str(chatbot.id)]))

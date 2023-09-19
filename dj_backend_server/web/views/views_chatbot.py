@@ -7,13 +7,9 @@ from django.urls import reverse
 from web.models.chatbot import Chatbot
 from web.models.chatbot_settings import ChatbotSetting
 from web.models.chat_histories import ChatHistory
-from web.models.codebase_data_sources import CodebaseDataSource
-from web.signals.codebase_datasource_was_created import codebase_data_source_added
-from web.signals.pdf_datasource_was_added import pdf_data_source_added
 from web.services.handle_pdf_datasource import HandlePdfDataSource
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponseServerError
-from web.signals.codebase_datasource_was_created import codebase_data_source_added
 from web.signals.chatbot_was_created import chatbot_was_created
 from web.enums.chatbot_initial_prompt_enum import ChatBotInitialPromptEnum
 from web.enums.common_enums import ChatBotDefaults
@@ -45,15 +41,6 @@ def create_via_website_flow(request):
         token=str(uuid4())[:20],
         website=website,
         prompt_message=prompt_message
-    )
-
-    # Trigger the ChatbotWasCreated event (if using Django signals or channels)
-    chatbot_was_created.send(
-        sender='create_via_codebase_flow',
-        id=chatbot.id,
-        name=chatbot.name,
-        website=chatbot.website,
-        prompt_message=chatbot.prompt_message
     )
     
     return HttpResponseRedirect(reverse('onboarding.config', args=[str(chatbot.id)]))
